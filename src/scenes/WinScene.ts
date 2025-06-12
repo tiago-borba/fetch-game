@@ -41,7 +41,6 @@ export default class WinScene extends Phaser.Scene {
     video.play(false);
 
     video.on("complete", () => {
-      alert("complete");
       this.scene.start("FullScreenImageScene");
     });
   }
