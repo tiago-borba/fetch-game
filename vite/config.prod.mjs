@@ -18,7 +18,7 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: './',
+    base: '/fetch-game/',
     plugins: [
         react(),
         phasermsg()
