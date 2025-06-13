@@ -251,7 +251,9 @@ export default class BattleScene extends Phaser.Scene {
       delay: 1500,
       loop: true,
       callback: () => {
-        if (this.inPlayerAnimation || this.inEnemyAnimation) return;
+        if (this.inPlayerAnimation || this.inEnemyAnimation || this.defending)
+          return;
+
         this.inEnemyAnimation = true;
         if (!this.paused && this.enemy.hp > 0) {
           const intent =
@@ -275,9 +277,21 @@ export default class BattleScene extends Phaser.Scene {
             duration: 320,
             yoyo: true,
             ease: "Sine.easeInOut",
-            onYoyo: () => this.playerImage.setFlip(true, true),
+            onYoyo: () => {
+              if (intent === "heavy") {
+                this.playerImage.setFlip(true, true);
+              }
+
+              this.playerImage.setTint(
+                intent === "heavy" ? 0x8000ff : 0xff0000
+              );
+            },
             onComplete: () => {
-              this.playerImage.resetFlip();
+              this.playerImage.clearTint();
+              if (intent === "heavy") {
+                this.playerImage.resetFlip();
+              }
+
               this.inEnemyAnimation = false;
             },
           });
@@ -290,7 +304,7 @@ export default class BattleScene extends Phaser.Scene {
     });
   }
 
-  animateAttack() {
+  animateAttack(isSuper?: boolean) {
     this.inPlayerAnimation = true;
     this.attackButton.disableInteractive();
     this.tweens.add({
@@ -304,8 +318,20 @@ export default class BattleScene extends Phaser.Scene {
         this.inPlayerAnimation = false;
       },
     });
-    this.enemyImage.setFlipY(true);
-    this.time.delayedCall(500, () => this.enemyImage.resetFlip());
+
+    if (isSuper) {
+      this.playerImage.setTint(0xff5500);
+      this.enemyImage.setFlipY(true);
+    }
+
+    this.enemyImage.setTint(isSuper ? 0x8000ff : 0xff0000);
+    this.time.delayedCall(500, () => {
+      this.enemyImage.clearTint();
+      if (isSuper) {
+        this.playerImage.clearTint();
+        this.enemyImage.resetFlip();
+      }
+    });
   }
 
   useStrike() {
@@ -324,7 +350,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   useSuperHit() {
-    this.animateAttack();
+    this.animateAttack(true);
     this.enemy.hp -= 15;
     this.updateEnemyAfterHit();
   }

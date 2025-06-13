@@ -7,7 +7,7 @@ const PointlingsBattle = () => {
 
   useEffect(() => {
     const config = {
-      type: Phaser.CANVAS,
+      type: Phaser.WEBGL,
       width: 360,
       height: 640,
       backgroundColor: "#1a1a1a",
