@@ -1,30 +1,49 @@
 import Phaser from "phaser";
 
-const enemies = [
+const enemies: Enemy[] = [
   {
     name: "Mr. Markup",
     hp: 30,
     image: "assets/markup.png",
-    pattern: ["light", "heavy", "light", "defend"],
+    pattern: ["light", "heavy", "light", "defend"] as const,
   },
   {
     name: "Expired Coupon",
     hp: 20,
     image: "assets/expired-coupon.png",
-    pattern: ["light", "light", "heavy"],
+    pattern: ["light", "light", "heavy"] as const,
   },
   {
     name: "Pricey Pete",
     hp: 25,
     image: "assets/pricey-pete.png",
-    pattern: ["heavy", "heavy", "defend", "light"],
+    pattern: ["heavy", "heavy", "defend", "light"] as const,
   },
 ];
 
+interface Enemy {
+  name: string;
+  hp: number;
+  image: string;
+  pattern: ("light" | "heavy" | "defend")[];
+}
+
+const scaleX = 360 / 414;
+const scaleY = 640 / 869;
+const sx = (x: number): number => x * scaleX;
+const sy = (y: number): number => y * scaleY;
+
 export default class BattleScene extends Phaser.Scene {
-  updatePlayerHPBar: () => void;
-  updateHPBar: () => void;
-  updateIntent: () => void;
+  updatePlayerHPBar!: () => void;
+  updateHPBar!: () => void;
+  updateIntent!: () => void;
+  createSpriteButton!: (
+    x: number,
+    y: number,
+    key: string,
+    onClick: (button: Phaser.GameObjects.Sprite) => void
+  ) => Phaser.GameObjects.Sprite;
+
   enemyIndex = 0;
   enemyMoveIndex = 0;
   score = 0;
@@ -32,32 +51,21 @@ export default class BattleScene extends Phaser.Scene {
   paused = false;
   inPlayerAnimation = false;
   inEnemyAnimation = false;
-  enemy: { name: string; hp: number; image: string; pattern: string[] } = {
-    name: "",
-    hp: 0,
-    image: "",
-    pattern: [],
-  };
+  enemy: Enemy = { name: "", hp: 0, image: "", pattern: [] };
   playerHP = 100;
   playerCooldowns = { superHit: 0 };
   defending = false;
 
-  enemyText: Phaser.GameObjects.Text;
-  timerText: Phaser.GameObjects.Text;
-  intentText: Phaser.GameObjects.Text;
-  timer: Phaser.Time.TimerEvent;
-  enemyImage: Phaser.GameObjects.Image;
-  playerImage: Phaser.GameObjects.Image;
-  attackButton: Phaser.GameObjects.Sprite;
-  defendButton: Phaser.GameObjects.Sprite;
-  superHitButton: Phaser.GameObjects.Sprite;
-  createSpriteButton: (
-    x: number,
-    y: number,
-    key: string,
-    onClick: (button: Phaser.GameObjects.Sprite) => void
-  ) => Phaser.GameObjects.Sprite;
-  pauseButton: Phaser.GameObjects.Sprite;
+  enemyText!: Phaser.GameObjects.Text;
+  timerText!: Phaser.GameObjects.Text;
+  intentText!: Phaser.GameObjects.Text;
+  timer!: Phaser.Time.TimerEvent;
+  enemyImage!: Phaser.GameObjects.Image;
+  playerImage!: Phaser.GameObjects.Image;
+  attackButton!: Phaser.GameObjects.Sprite;
+  defendButton!: Phaser.GameObjects.Sprite;
+  superHitButton!: Phaser.GameObjects.Sprite;
+  pauseButton!: Phaser.GameObjects.Sprite;
 
   constructor() {
     super("BattleScene");
@@ -72,96 +80,88 @@ export default class BattleScene extends Phaser.Scene {
       frameWidth: 130,
       frameHeight: 65,
     });
-
     this.load.spritesheet("super_button", "assets/super_sprite.png", {
       frameWidth: 130,
       frameHeight: 65,
     });
-
     this.load.spritesheet("start_stop_button", "assets/start-stop-sprite.png", {
       frameWidth: 100,
       frameHeight: 50,
     });
-
     this.load.video("victoryVideo", "assets/victory.mp4", false);
     this.load.video("loseVideo", "assets/lose.mp4", false);
     this.load.image("background", "assets/bg.png");
     this.load.image("player", "assets/pointling.png");
-    enemies.forEach((enemy) => {
-      this.load.image(enemy.name, enemy.image);
-    });
+    enemies.forEach((enemy) => this.load.image(enemy.name, enemy.image));
   }
 
   create() {
-    const createSpriteButton = (
-      x: number,
-      y: number,
-      key: string,
-      onClick: (sprite: Phaser.GameObjects.Sprite) => void
-    ): Phaser.GameObjects.Sprite => {
-      const sprite = this.add.sprite(x, y, key, 0).setInteractive();
+    this.createSpriteButton = (x, y, key, onClick) => {
+      const sprite = this.add.sprite(sx(x), sy(y), key, 0).setInteractive();
       sprite.on("pointerdown", () => sprite.setFrame(1));
       sprite.on("pointerup", () => {
         onClick(sprite);
         sprite.setFrame(0);
       });
       sprite.on("pointerout", () => sprite.setFrame(0));
+      sprite.setScale(0.9);
       return sprite;
     };
 
-    this.createSpriteButton = createSpriteButton;
-
-    // Adjust background to fit the canvas size
-    this.add.image(207, 434, "background").setDisplaySize(414, 869);
-
+    this.add.image(sx(207), sy(434), "background").setDisplaySize(360, 640);
     this.enemy = { ...enemies[this.enemyIndex] };
 
-    // Adjust HP bars and other UI elements based on the canvas size
-    const hpBarBg = this.add.rectangle(207, 120, 134, 20).setOrigin(0.5);
+    const hpBarBg = this.add
+      .rectangle(sx(207), sy(120), sx(134), sy(20))
+      .setOrigin(0.5);
     hpBarBg.setStrokeStyle(2, 0xffffff);
     const hpBar = this.add
-      .rectangle(207, 120, 130, 19, 0x00ff00)
+      .rectangle(sx(207), sy(120), sx(130), sy(19), 0x00ff00)
       .setOrigin(0.5);
 
     this.enemyText = this.add
-      .text(207, 90, `${this.enemy.name}`, {
-        font: "20px Arial",
+      .text(sx(207), sy(90), this.enemy.name, {
+        font: `${Math.floor(20 * scaleY)}px Arial`,
         color: "#ffffff",
       })
       .setOrigin(0.5);
 
     this.updateHPBar = () => {
       const percent = this.enemy.hp / enemies[this.enemyIndex].hp;
-      hpBar.width = 130 * Math.max(0, percent);
-      if (percent > 0.6) hpBar.setFillStyle(0x00ff00);
-      else if (percent > 0.3) hpBar.setFillStyle(0xffff00);
-      else hpBar.setFillStyle(0xff0000);
+      hpBar.width = sx(130) * Math.max(0, percent);
+      hpBar.setFillStyle(
+        percent > 0.6 ? 0x00ff00 : percent > 0.3 ? 0xffff00 : 0xff0000
+      );
     };
 
-    this.playerImage = this.add.image(207, 640, "player").setScale(0.15);
+    this.playerImage = this.add.image(sx(207), sy(590), "player").setScale(0.1);
 
-    const playerHpBg = this.add.rectangle(215, 730, 134, 20).setOrigin(0.5);
+    const playerHpBg = this.add
+      .rectangle(sx(215), sy(680), sx(134), sy(20))
+      .setOrigin(0.5);
     playerHpBg.setStrokeStyle(2, 0xffffff);
     const playerHpBar = this.add
-      .rectangle(215, 730, 130, 19, 0x00ff00)
+      .rectangle(sx(215), sy(680), sx(130), sy(19), 0x00ff00)
       .setOrigin(0.5);
 
     this.updatePlayerHPBar = () => {
       const percent = this.playerHP / 100;
-      playerHpBar.width = 130 * Math.max(0, percent);
-      if (percent > 0.6) playerHpBar.setFillStyle(0x00ff00);
-      else if (percent > 0.3) playerHpBar.setFillStyle(0xffff00);
-      else playerHpBar.setFillStyle(0xff0000);
+      playerHpBar.width = sx(130) * Math.max(0, percent);
+      playerHpBar.setFillStyle(
+        percent > 0.6 ? 0x00ff00 : percent > 0.3 ? 0xffff00 : 0xff0000
+      );
       if (this.playerHP <= 0)
         this.scene.start("LoseScene", { score: this.score });
     };
     this.updatePlayerHPBar();
 
-    this.enemyImage = this.add.image(207, 340, this.enemy.name).setScale(0.2);
+    this.enemyImage = this.add
+      .image(sx(207), sy(340), this.enemy.name)
+      .setScale(0.14);
 
     this.intentText = this.add
-      .text(207, 170, "", {
-        font: "18px Arial",
+      .text(sx(207), sy(170), "", {
+        font: `${Math.floor(18 * scaleY)}px Arial`,
         color: "#ffcc00",
       })
       .setOrigin(0.5);
@@ -181,15 +181,15 @@ export default class BattleScene extends Phaser.Scene {
     this.updateIntent();
 
     this.timerText = this.add
-      .text(207, 840, `Time: ${this.timeLeft}`, {
-        font: "24px Arial",
+      .text(sx(207), sy(730), `Time: ${this.timeLeft}`, {
+        font: `${Math.floor(28 * scaleY)}px Arial`,
         color: "#ffffff",
       })
       .setOrigin(0.5);
 
     this.attackButton = this.createSpriteButton(
       80,
-      780,
+      800,
       "strike_button",
       () => {
         if (!this.paused && !this.inEnemyAnimation && !this.inPlayerAnimation)
@@ -199,7 +199,7 @@ export default class BattleScene extends Phaser.Scene {
 
     this.defendButton = this.createSpriteButton(
       215,
-      780,
+      800,
       "shield_button",
       () => {
         if (!this.paused && !this.inEnemyAnimation && !this.inPlayerAnimation)
@@ -209,7 +209,7 @@ export default class BattleScene extends Phaser.Scene {
 
     this.superHitButton = this.createSpriteButton(
       340,
-      780,
+      800,
       "super_button",
       () => {
         const now = () => this.time.now;
@@ -222,17 +222,17 @@ export default class BattleScene extends Phaser.Scene {
       }
     );
 
-    const spritePause = this.add
-      .sprite(360, 65, "start_stop_button", 0)
+    this.pauseButton = this.add
+      .sprite(sx(350), sy(60), "start_stop_button", 0)
       .setInteractive();
 
-    spritePause.on("pointerdown", () => {
-      spritePause.setFrame(this.paused ? 0 : 1);
+    this.pauseButton.on("pointerdown", () => {
+      this.pauseButton.setFrame(this.paused ? 0 : 1);
       this.paused = !this.paused;
       this.time.paused = this.paused;
     });
 
-    this.pauseButton = spritePause;
+    this.pauseButton.setScale(0.9);
 
     this.timer = this.time.addEvent({
       delay: 1000,
@@ -254,26 +254,25 @@ export default class BattleScene extends Phaser.Scene {
         if (this.inPlayerAnimation || this.inEnemyAnimation) return;
         this.inEnemyAnimation = true;
         if (!this.paused && this.enemy.hp > 0) {
-          const pattern = this.enemy.pattern;
-          const intent = pattern[this.enemyMoveIndex % pattern.length];
-          let damage = 0;
-          if (intent === "light") damage = 4;
-          else if (intent === "heavy") damage = 9;
-          else if (intent === "defend") {
-            this.enemy.hp += 3;
-            if (this.enemy.hp > enemies[this.enemyIndex].hp)
-              this.enemy.hp = enemies[this.enemyIndex].hp;
+          const intent =
+            this.enemy.pattern[this.enemyMoveIndex % this.enemy.pattern.length];
+          if (intent === "defend") {
+            this.enemy.hp = Math.min(
+              this.enemy.hp + 3,
+              enemies[this.enemyIndex].hp
+            );
             this.updateHPBar();
             this.enemyMoveIndex++;
             this.inEnemyAnimation = false;
             this.updateIntent();
             return;
           }
+          const damage = intent === "light" ? 4 : 9;
           const finalDamage = this.defending ? Math.floor(damage / 2) : damage;
           this.tweens.add({
             targets: this.enemyImage,
-            y: this.playerImage.y + 10,
-            duration: 300,
+            y: 300,
+            duration: 320,
             yoyo: true,
             ease: "Sine.easeInOut",
             onYoyo: () => this.playerImage.setFlip(true, true),
@@ -296,7 +295,7 @@ export default class BattleScene extends Phaser.Scene {
     this.attackButton.disableInteractive();
     this.tweens.add({
       targets: this.playerImage,
-      y: this.enemyImage.y - 80,
+      y: 340,
       duration: 200,
       yoyo: true,
       ease: "Power2",
@@ -317,11 +316,9 @@ export default class BattleScene extends Phaser.Scene {
 
   useShield() {
     this.defending = true;
-    console.log("Defending state: ", this.defending); // Log defending state
     this.playerImage.setTint(0x3399ff);
     this.time.delayedCall(1500, () => {
       this.defending = false;
-      console.log("Defending state after call: ", this.defending); // Log after tint clear
       this.playerImage.clearTint();
     });
   }

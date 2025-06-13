@@ -8,14 +8,14 @@ const PointlingsBattle = () => {
   useEffect(() => {
     const config = {
       type: Phaser.CANVAS,
-      width: 414,
-      height: 869,
+      width: 360,
+      height: 640,
       backgroundColor: "#1a1a1a",
       parent: gameRef.current,
       scene: [BattleScene, WinScene, LoseScene, PlayMoreScene],
       scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        autoCenter: Phaser.Scale.FIT,
       },
     };
 
@@ -31,17 +31,16 @@ const PointlingsBattle = () => {
         height: "100vh",
         display: "flex",
         justifyContent: "center",
-        alignItems: "center",
-        marginTop: 50,
-        marginBottom: 50,
+        alignItems: "start",
         boxSizing: "border-box",
       }}
     >
       <div
         style={{
           position: "relative",
-          width: "414px",
-          height: "869px",
+          width: "360px",
+          height: "640px",
+          marginTop: "10vh",
         }}
       >
         <img
@@ -50,9 +49,9 @@ const PointlingsBattle = () => {
           style={{
             position: "absolute",
             top: -100,
-            left: -190,
-            width: "790px",
-            height: "1080px",
+            left: -140,
+            width: "640px",
+            height: "830px",
             pointerEvents: "none",
             zIndex: 2,
           }}
@@ -60,8 +59,8 @@ const PointlingsBattle = () => {
         <div
           ref={gameRef}
           style={{
-            width: "414px",
-            height: "869px",
+            width: "360px",
+            height: "640px",
             position: "absolute",
             top: 0,
             left: 0,
